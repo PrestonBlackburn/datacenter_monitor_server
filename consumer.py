@@ -1,0 +1,89 @@
+import meshtastic.serial_interface
+from pubsub import pub
+from datetime import datetime
+from typing import Any, Optional
+import time
+import logging
+import psycopg
+
+TEST_CHANNEL_INDEX = 1
+_TZ_NAME = time.tzname[time.localtime().tm_isdst > 0]
+CONSUMER_DEVICE = "/dev/ttyUSB1" #heltec
+PRODUCER_DEVICE = '/dev/ttyACM0'
+
+# logging.getLogger("meshtastic").setLevel(logging.CRITICAL)
+time.sleep(2)
+
+with meshtastic.serial_interface.SerialInterface(PRODUCER_DEVICE) as iface:
+    for node_id, node in iface.nodes.items():
+        if "02e4" in node.get("user", {}).get("longName", "unknown"):
+            print(f"SNR: {node.get('snr')}")
+            print(f"RSSI: {node.get('lastHeard')}")
+            print(f"hopsAway: {node.get('hopsAway')}")
+
+def test_channels(device_name: str):
+    with meshtastic.serial_interface.SerialInterface(device_name) as iface:
+        channels = iface.localNode.showChannels()
+        print(channels)
+
+def on_receive(packet: dict[str, Any], interface: Any) -> None:  # pylint: disable=unused-argument
+    """Print a compact line for each received text packet on channel 1."""
+    
+    # 1. Check if the channel matches (Index 1)
+    # The packet 'channel' field represents the channel index
+    channel_index = packet.get("channel", 0)
+    if channel_index != 1:
+        return  # Ignore traffic on all other channels (including Primary 0)
+
+    # 2. Decode the packet
+    decoded = packet.get("decoded", {})
+    if decoded.get("portnum") != "TEXT_MESSAGE_APP":
+        return
+
+    message = decoded.get("text")
+    if not message:
+        return
+
+    # 3. Print the message
+    sender_id = packet.get("fromId", "unknown")
+    message_time = datetime.now().strftime(f"%a %b %d %Y %H:%M:%S {_TZ_NAME}")
+    print(f"{message_time} : Channel {channel_index} : {sender_id} : {message}")
+
+
+def listen_for_messages(device_name:str, channel_index:int = TEST_CHANNEL_INDEX) -> int:
+    """Connect over serial and print inbound text messages."""
+
+    pub.subscribe(on_receive, "meshtastic.receive")
+
+
+    iface: Optional[meshtastic.serial_interface.SerialInterface] = None
+    try:
+        iface = meshtastic.serial_interface.SerialInterface(device_name)
+        print("Connected. Listening for text messages. Press Ctrl+C to exit.")
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        return 0
+    except Exception as exc:
+        print(f"Error: Could not monitor serial messages: {exc}")
+        return 1
+    finally:
+        if iface:
+            iface.close()
+    return 0
+
+
+if __name__ == "__main__":
+    logging.getLogger("meshtastic").setLevel(logging.CRITICAL)
+    #test_channels(CONSUMER_DEVICE)
+    #time.sleep(3)
+    #test_channels(PRODUCER_DEVICE)
+    #time.sleep(3)  # let ports fully release before opening again
+    listen_for_messages(CONSUMER_DEVICE)
+
+
+def save_readings():
+    ...
+
+def read_latest_messages():
+    ...

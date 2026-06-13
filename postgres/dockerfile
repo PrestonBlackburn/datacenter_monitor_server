@@ -1,0 +1,11 @@
+# We actually just want to use the pgvector built in image
+FROM postgres:18
+
+# copy over the startup scripts
+COPY ./init_setup/* ./post_setup/* /docker-entrypoint-initdb.d/
+RUN chmod -R 775 /docker-entrypoint-initdb.d
+RUN sed -i 's/\r$//' /docker-entrypoint-initdb.d/init-user.sh
+
+# run locally:
+# docker build --no-cache -t sensor-postgres .
+# docker run --name sensor-postgres -v ${PWD}/local_volume:/var/lib/postgresql/data -p 5432:5432 sensor-postgres
