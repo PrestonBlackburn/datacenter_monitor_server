@@ -39,6 +39,7 @@ meshtastic --port /dev/ttyACM0 --noproto
 
 Create new private channels:
 
+
 <!-- lsof /dev/ttyUSB2
 kill 784958 -->
 ```bash
