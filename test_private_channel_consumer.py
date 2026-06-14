@@ -1,20 +1,31 @@
 import meshtastic.serial_interface
 from pubsub import pub
-from meshtastic.mesh_interface import MeshInterface
 from datetime import datetime
 from typing import Any, Optional
 import time
 import logging
+from dataclasses import dataclass, field
+import json
 
 TEST_CHANNEL_INDEX = 1
 _TZ_NAME = time.tzname[time.localtime().tm_isdst > 0]
-CONSUMER_DEVICE = "/dev/ttyUSB1" #heltec
+CONSUMER_DEVICE = "/dev/ttyUSB0" #heltec
 PRODUCER_DEVICE = '/dev/ttyACM0'
 
 # logging.getLogger("meshtastic").setLevel(logging.CRITICAL)
 time.sleep(2)
 
-with meshtastic.serial_interface.SerialInterface(PRODUCER_DEVICE) as iface:
+@dataclass
+class AudioMeasurement:
+    created_time: datetime = field(default_factory=lambda: None)
+    hz_110_dbfs: float = field(default_factory=lambda: None)
+    hz_440_dbfs: float = field(default_factory=lambda: None)
+    hz_1000_dbfs: float = field(default_factory=lambda: None)
+    hz_4000_dbfs: float = field(default_factory=lambda: None)
+    recieved_time: datetime = field(default_factory=lambda: datetime.now())
+    device_model: str = field(default_factory=lambda: "SPH0645LM4H")
+
+with meshtastic.serial_interface.SerialInterface(CONSUMER_DEVICE) as iface:
     for node_id, node in iface.nodes.items():
         if "02e4" in node.get("user", {}).get("longName", "unknown"):
             print(f"SNR: {node.get('snr')}")
@@ -48,6 +59,27 @@ def on_receive(packet: dict[str, Any], interface: Any) -> None:  # pylint: disab
     sender_id = packet.get("fromId", "unknown")
     message_time = datetime.now().strftime(f"%a %b %d %Y %H:%M:%S {_TZ_NAME}")
     print(f"{message_time} : Channel {channel_index} : {sender_id} : {message}")
+
+    try:
+        print("processing message")
+        message_formatted = json.loads(message)
+        records = zip(message_formatted[0], message_formatted[1], message_formatted[2])
+        received_date_format = "%Y-%m-%d %H:%M"
+        measurement = AudioMeasurement(created_time = datetime.strptime(records[0][0], received_date_format))
+        for record in records:
+            match record[1]:
+                case 110:
+                    measurement.hz_110_dbfs = record[2]
+                case 440:
+                    measurement.hz_440_dbfs = record[2]
+                case 1000:
+                    measurement.hz_1000_dbfs = record[2]
+                case 4000:
+                    measurement.hz_4000_dbfs = record[2]
+        # save_measurement(measurement)
+
+    except Exception as e: 
+        print(f"Message formatting error: {e}\n got:\n{message}")
 
 
 def listen_for_messages(device_name:str, channel_index:int = TEST_CHANNEL_INDEX) -> int:

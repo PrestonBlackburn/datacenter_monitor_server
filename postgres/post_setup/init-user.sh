@@ -7,12 +7,11 @@ echo "Running Postgres initialization script..."
 
 psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL
 --------------------
--- Pat app setup
+-- Sensor app setup
 --------------------
 CREATE ROLE $SENSOR_SVC_USER WITH LOGIN PASSWORD '$SENSOR_SVC_PASSWORD';
-\connect pat;
+\connect sensors;
 GRANT ALL PRIVILEGES ON DATABASE $POSTGRES_DB TO $SENSOR_SVC_USER;
-GRANT ALL PRIVILEGES ON DATABASE audio_sensor TO $SENSOR_SVC_USER;
 
 GRANT ALL PRIVILEGES ON SCHEMA app TO $SENSOR_SVC_USER;
 GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA app TO $SENSOR_SVC_USER;
