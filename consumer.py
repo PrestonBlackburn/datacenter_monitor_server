@@ -98,7 +98,9 @@ def on_receive(packet: dict[str, Any], interface: Any) -> None:  # pylint: disab
     try:
         print("processing message")
         message_formatted = json.loads(message)
-        records = zip(message_formatted[0], message_formatted[1], message_formatted[2])
+        print(f"formatted records: {message_formatted}")
+        records = list(zip(message_formatted[0], message_formatted[1], message_formatted[2]))
+
         received_date_format = "%Y-%m-%d %H:%M"
         measurement = AudioMeasurement(created_time = datetime.strptime(records[0][0], received_date_format))
         for record in records:

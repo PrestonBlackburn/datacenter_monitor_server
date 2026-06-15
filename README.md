@@ -55,3 +55,8 @@ python create_test_channel.py
 meshtastic --port /dev/ttyUSB1 --set channel_index 1 channel_num 1
 ```
 
+
+Dump data:
+```bash
+pg_dump -h [host] -p [port] -U [username] -d [database_name] > [backup_file.sql]
+```
