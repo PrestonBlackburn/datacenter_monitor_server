@@ -32,7 +32,7 @@ ax.scatter(x, hZ_1000, label = "950-1050 Hz", color = "#548C64", alpha = 0.8, s=
 ax.xaxis.set_major_formatter(ConciseDateFormatter(ax.xaxis.get_major_locator()))
 # ax.yaxis()
 
-ax.set_title("Audio readings over time")
+ax.set_title("Audio Measurements Over Time (Backyard Test)")
 ax.set_xlabel('dBFS')
 ax.set_ylabel('Time Received')
 ax.legend()
