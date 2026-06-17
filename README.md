@@ -66,3 +66,17 @@ Restore data:
 ```bash
 docker run --rm -it --env-file .env_remote -v "$(pwd)":/backup --entrypoint pg_restore postgres:18 -h postgres.lan -p 5432 -U "$POSTGRES_USER" -d sensors --clean --if-exists /backup/local-backup-20260616.dump
 ```
+
+**Run script in background**  
+setup env vars and source `.env` file  
+
+
+(also may need to update dialout permissions)  
+```bash
+sudo usermod -a -G dialout $USER
+```
+
+Run consumer script in the background
+```bash
+nohup python -u consumer.py > output.log 2>&1 &
+```
