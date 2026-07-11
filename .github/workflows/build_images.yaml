@@ -33,6 +33,12 @@ jobs:
           docker build -t ghcr.io/${{ env.REPO_OWNER }}/sensor-postgres:${{ env.IMAGE_TAG }} -t ghcr.io/${{ env.REPO_OWNER }}/sensor-postgres:latest postgres
           docker push ghcr.io/${{ env.REPO_OWNER }}/sensor-postgres --all-tags
 
+      - name: Build + Push Consumer Image
+        run: |
+          docker build -t ghcr.io/${{ env.REPO_OWNER }}/sensor-consumer:${{ env.IMAGE_TAG }} -t ghcr.io/${{ env.REPO_OWNER }}/sensor-consumer:latest consumer
+          docker push ghcr.io/${{ env.REPO_OWNER }}/sensor-consumer --all-tags
+
       - name: Output Image URLs
         run: |
           echo "Postgres: ghcr.io/${{ env.REPO_OWNER }}/sensor-postgres:${{ env.IMAGE_TAG }}"
+          echo "Consumer: ghcr.io/${{ env.REPO_OWNER }}/sensor-consumer:${{ env.IMAGE_TAG }}"
