@@ -1,5 +1,4 @@
-# We actually just want to use the pgvector built in image
-FROM postgres:18
+FROM timescale/timescaledb:latest-pg18
 
 # copy over the startup scripts
 COPY ./init_setup/* ./post_setup/* /docker-entrypoint-initdb.d/

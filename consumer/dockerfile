@@ -1,0 +1,17 @@
+FROM python:3.13-slim-bookworm
+
+COPY requirements.txt /tmp/
+
+RUN pip install -r /tmp/requirements.txt
+
+RUN useradd --create-home appuser
+WORKDIR /home/appuser
+USER appuser
+
+COPY app/consumer.py .
+
+CMD [ "python", "./consumer.py" ]
+
+# run locally:
+# docker build --no-cache -t sensor-consumer .
+# docker run --name sensor-consumer sensor-consumer    
