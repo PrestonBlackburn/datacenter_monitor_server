@@ -1,0 +1,51 @@
+[build-system]
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[project]
+name = "sensor_dashboard"
+authors = [
+    {name = "Preston Blackburn", email = "prestonbl@pm.me"}
+]
+maintainers = [
+    {name = "Preston Blackburn", email = "prestonbl@pm.me"}
+]
+keywords = [
+    "iot",
+    "dashboard"
+]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: Implementation :: CPython",
+  "Operating System :: OS Independent",
+]
+version = "0.1.0"
+description = "Minimal dashboard for viewing sensor data"
+readme = "readme.md"
+license = {text = "MIT"}
+requires-python = ">=3.10,<4.0"
+
+dependencies = [
+    "litestar[standard]>=2.4.1",
+    "psycopg[binary]"
+]
+
+[project.scripts]
+app = "litestar.__main__:run_cli"
+
+[tool.hatch.build]
+sources = ["sensor_dashboard"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "sensor_dashboard",
+  "readme.md"
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["sensor_dashboard"]
