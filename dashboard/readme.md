@@ -12,7 +12,8 @@ uv pip install -e .
 
 Run the server
 ```bash
-litestar run --reload
+litestar run
+litestar run --reload --debug
 ```
 
 # what do we want to show?
