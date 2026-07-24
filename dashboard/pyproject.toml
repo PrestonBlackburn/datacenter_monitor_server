@@ -32,17 +32,17 @@ requires-python = ">=3.10,<4.0"
 
 dependencies = [
     "litestar[standard]>=2.4.1",
-    "psycopg[binary]"
+    "psycopg[binary,pool]"
 ]
 
 [tool.hatch.build]
-sources = ["app"]
+sources = ["dashboard_app"]
 
 [tool.hatch.build.targets.sdist]
 include = [
-  "app",
+  "dashboard_app",
   "readme.md"
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["app"]
+packages = ["dashboard_app"]

@@ -7,4 +7,8 @@ RUN sed -i 's/\r$//' /docker-entrypoint-initdb.d/init-user.sh
 
 # run locally:
 # docker build --no-cache -t sensor-postgres .
-# docker run --name sensor-postgres -v ${PWD}/local_volume:/var/lib/postgresql/data -p 5432:5432 sensor-postgres    
+# docker run --name sensor-postgres --env-file ${PWD}/.env -v ${PWD}/local_volume:/var/lib/postgresql/data -p 5432:5432 sensor-postgres    
+# run locally with test data
+# docker run --name sensor-postgres --rm --env-file ${PWD}/.env -v ${PWD}/local_volume:/var/lib/postgresql -v ${PWD}/dev_data/99-dev-seed.sql:/docker-entrypoint-initdb.d/99-dev-seed.sql:ro -p 5432:5432 sensor-postgres
+# docker cp dev_data/99-dev-seed.sql sensor-postgres:/tmp/
+# docker exec -it sensor-postgres psql -U admin -d sensors -f /tmp/99-dev-seed.sql

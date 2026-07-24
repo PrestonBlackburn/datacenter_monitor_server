@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    {% include 'components/dashboard/title.html' with context %}
+    <div class="p-6 max-w-7xl mx-auto space-y-6">
+        <!-- Main Grid Layout: Map Left (60%), Stacked Charts Right (40%) -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {% include 'components/dashboard/map.html' with context %}
+        {% include 'components/dashboard/sensor_charts.html' with context %}
+        </div>
+    </div>
+{% endblock %}

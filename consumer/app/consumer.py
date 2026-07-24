@@ -80,24 +80,24 @@ def invalidate_conn(conn: psycopg.Connection) -> None:
 class AudioSensorMessage:
     received_time: datetime
     sensor_id: str
-    hz_4000: float
-    hz_1000: float
-    hz_440: float
-    hz_110: float
+    hz: int
+    dbfs: float
 
     def insert(self, conn: psycopg.Connection) -> None:
         sql = """INSERT INTO app.audio_sensor
-            (received_time, sensor_id,
-            hz_4000_dbfs, hz_1000_dbfs, hz_440_dbfs, hz_110_dbfs)
-        VALUES (%s, %s, %s, %s, %s, %s)"""
+            (
+                received_time, 
+                sensor_id,
+                hz, 
+                dbfs
+            )
+        VALUES (%s, %s, %s, %s)"""
         with conn.cursor() as cur:
             cur.execute(sql, (
                 self.received_time,
                 self.sensor_id,
-                self.hz_4000,
-                self.hz_1000,
-                self.hz_440,
-                self.hz_110
+                self.hz,
+                self.dbfs
             ))
             conn.commit()
 
@@ -167,7 +167,7 @@ def extract_dev_eui(topic: str, topic_re: re.Pattern) -> str:
     m = topic_re.match(topic)
     return m.group(1) if m else "unknown"
 
-def create_record(payload:dict, received_time: datetime) -> AudioSensorMessage:
+def create_record(payload:dict, received_time: datetime) -> list[AudioSensorMessage]:
     device_info = payload.get("deviceInfo", {})
     dev_eui = device_info.get("devEui", "unknown")
     device_name = device_info.get("deviceName", "unknown")
@@ -192,15 +192,33 @@ def create_record(payload:dict, received_time: datetime) -> AudioSensorMessage:
     decoded = decode_uplink(raw)
     _logger.debug(f"decoded message: {decoded}")
     
-    audio_message = AudioSensorMessage(
-        received_time = received_time,
-        sensor_id = dev_eui,
-        hz_4000  = decoded["hz_4000_dbfs"],
-        hz_1000 = decoded["hz_1000_dbfs"],
-        hz_440 = decoded["hz_440_dbfs"],
-        hz_110 = decoded["hz_110_dbfs"]
-    )
-    return audio_message
+    audio_messages = [
+        AudioSensorMessage(
+            received_time = received_time,
+            sensor_id = dev_eui,
+            hz = 4000,
+            dbfs = decoded["hz_4000_dbfs"],
+        ),
+        AudioSensorMessage(
+            eceived_time = received_time,
+            sensor_id = dev_eui,
+            hz = 1000,
+            dbfs = decoded["hz_1000_dbfs"],
+        ),
+        AudioSensorMessage(
+            eceived_time = received_time,
+            sensor_id = dev_eui,
+            hz = 440,
+            dbfs = decoded["hz_440_dbfs"],
+        ),
+        AudioSensorMessage(
+            eceived_time = received_time,
+            sensor_id = dev_eui,
+            hz = 110,
+            dbfs = decoded["hz_110_dbfs"],
+        )
+    ]
+    return audio_messages
 
 def write_error(conn: psycopg.Connection | None, 
                 payload_for_json, 
@@ -262,9 +280,10 @@ def on_message(client, userdata, msg):
     created_time = parse_chirpstack_time(payload.get("time"))
 
     try:
-        record = create_record(payload, recieved_time)
-        record.insert(conn)
-        _logger.info("Inserted reading for %s", record.sensor_id)
+        # could update to insert many later
+        records = create_record(payload, recieved_time)
+        [record.insert(conn) for record in records]
+        _logger.info("Inserted reading for %s", records[0].sensor_id)
     except (KeyError, ValueError, TypeError, base64.binascii.Error) as e:
         # This is the same failure mode your errors table is meant to catch -
         # log it here rather than crashing the subscriber.

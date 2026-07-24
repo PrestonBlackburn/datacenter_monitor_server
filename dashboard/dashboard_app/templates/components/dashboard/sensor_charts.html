@@ -1,0 +1,51 @@
+
+<!-- Right Column: Two Stacked ECharts (Spans 5 cols on large screens) -->
+<div class="lg:col-span-5 flex flex-col gap-6">
+
+    <!-- Chart 1: audioerature / Metric 1 -->
+    <div class="bg-white rounded-xl shadow-sm border border-taupe-200 p-4 flex flex-col h-[288px]">
+
+        <h3 class="text-sm font-semibold text-taupe-800 mb-2">Sensor A</h3>
+        <div class="flex items-center gap-2">
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-dusty-olive-100 text-dusty-olive-800">
+                System Active
+            </span>
+        </div>
+
+        <div id="chart-audio" class="w-full flex-1"></div>
+    </div>
+    
+</div>
+
+<!-- Map and Chart Initialization Script -->
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        // Initialize Apache EChart 1 (audioerature)
+        const audioChart = echarts.init(document.getElementById('chart-audio'));
+        const audioOption = {
+            grid: { top: 20, right: 20, bottom: 25, left: 40, containLabel: true },
+            tooltip: { trigger: 'axis' },
+            xAxis: { 
+                type: 'category', 
+                data: ['12:00', '13:00', '14:00', '15:00', '16:00'],
+                axisLine: { lineStyle: { color: '#a39b93' } }
+            },
+            yAxis: { 
+                type: 'value', 
+                splitLine: { lineStyle: { color: '#f0ece6' } }
+            },
+            series: [{
+                data: [21.5, 22.0, 23.1, 22.4, 21.8],
+                type: 'line',
+                smooth: true,
+                color: '#c25e38' // Matches cinnamon-wood tone
+            }]
+        };
+        audioChart.setOption(audioOption);
+
+        // Responsive resize handler for charts
+        window.addEventListener('resize', () => {
+            audioChart.resize();
+        });
+    });
+</script>

@@ -1,0 +1,26 @@
+<!-- Left Column: Leaflet Map (Spans 7 cols on large screens) -->
+<div class="lg:col-span-7 bg-white rounded-xl shadow-sm border border-taupe-200 p-4 flex flex-col h-[600px]">
+    <h2 class="text-base font-semibold text-taupe-800 mb-3">Facility Locations</h2>
+    <!-- Map Container -->
+    <div id="map" class="w-full flex-1 rounded-lg z-0"></div>
+</div>
+
+<!-- Map and Chart Initialization Script -->
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        // Initialize Leaflet Map (Centered on Colorado Springs region)
+        const map = L.map('map').setView([38.8339, -104.8214], 12);
+        
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map);
+
+        // Example marker for a datacenter node
+        L.marker([38.8339, -104.8214]).addTo(map)
+            .bindPopup('<b>Taurus</b><br/>Status: Proposed');
+
+        // Force Leaflet to recalculate dimensions if rendered dynamically via HTMX
+        setTimeout(() => { map.invalidateSize(); }, 200);
+    });
+</script>

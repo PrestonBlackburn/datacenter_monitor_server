@@ -5,3 +5,5 @@ venv
 .env*
 **/node_modules/**
 __pycache__
+local_llm/**
+**/opencode.json

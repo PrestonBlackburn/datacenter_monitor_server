@@ -6,13 +6,23 @@ GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO admin;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL PRIVILEGES ON TABLES TO admin;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL PRIVILEGES ON SEQUENCES TO admin;
 
+-- automatic timestamping
+CREATE OR REPLACE FUNCTION app.set_updated_time()
+RETURNS trigger AS $$
+BEGIN
+    NEW.updated_time := now();
+    NEW.created_time := OLD.created_time;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+
+
 create table if not exists app.audio_sensor (
     received_time    timestamptz not null,
     sensor_id        text not null,
-    hz_4000_dbfs     DOUBLE PRECISION,
-    hz_1000_dbfs     DOUBLE PRECISION,
-    hz_440_dbfs      DOUBLE PRECISION,
-    hz_110_dbfs      DOUBLE PRECISION
+    hz               DOUBLE PRECISION,
+    dbfs             DOUBLE PRECISION
 ) WITH (
     tsdb.hypertable,
     tsdb.segmentby = 'sensor_id',
@@ -28,19 +38,61 @@ create table if not exists app.audio_sensor_errors (
     recieved_time    timestamptz not null,
     sensor_id        text not null,
     data_b64         text,
-    object           JSONB
+    tags             JSONB
 );
 comment on table app.audio_sensor_errors is 'unparsable message tracking';
 
 create table if not exists app.audio_sensor_info (
     sensor_id       text not null,
-    created_time    timestamptz not null,
+    created_time    timestamptz not null default now(),
+    updated_time    timestamptz not null default now(),
     lat             DOUBLE PRECISION,
     long            DOUBLE PRECISION,
     geo_time_start  timestamptz,
     geo_time_stop   timestamptz,
-    object          JSONB
+    tags            JSONB
 );
 comment on table app.audio_sensor_info is 'metadata for individual sensors';
 COMMENT ON COLUMN app.audio_sensor_info.geo_time_start IS 'time that geo coordinates are effective from';
 COMMENT ON COLUMN app.audio_sensor_info.geo_time_stop IS 'time that geo coordinates are effective to';
+
+CREATE TRIGGER trg_audio_sensor_info_updated
+    BEFORE UPDATE ON app.audio_sensor_info
+    FOR EACH ROW
+    EXECUTE FUNCTION app.set_updated_time();
+
+
+create table if not exists app.datacenter_info (
+    datacenter_id   text not null,
+    created_time    timestamptz not null default now(),
+    updated_time    timestamptz not null default now(),
+    lat             DOUBLE PRECISION,
+    long            DOUBLE PRECISION,
+    name            text,
+    status          text,
+    description     text
+);
+
+CREATE TRIGGER trg_datacenter_info_updated
+    BEFORE UPDATE ON app.datacenter_info
+    FOR EACH ROW
+    EXECUTE FUNCTION app.set_updated_time();
+
+
+---- Prepoulaed data -----
+INSERT INTO app.datacenter_info (
+    datacenter_id,
+    lat,
+    long,
+    name,
+    status,
+    description
+)
+VALUES (
+    gen_random_uuid(),
+    38.894605, 
+    -104.858710,
+    'Taurus',
+    'Planned',
+    '50 MW capacity data center by California-based developer Raeden'
+);
