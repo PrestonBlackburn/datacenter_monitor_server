@@ -1,0 +1,14 @@
+<!-- components/dashboard/sensor_charts.html -->
+<div id="sensor-charts-panel" class="lg:col-span-5 flex flex-col gap-6">
+    {% for sensor in sensors %}
+    <div class="bg-white rounded-xl shadow-sm border border-taupe-200 p-4 flex flex-col h-[288px]"
+         hx-get="/sensor/{{ sensor.sensor_id }}/data/all"
+         hx-trigger="intersect once"
+         hx-swap="innerHTML">
+        <h3 class="text-sm font-semibold text-taupe-800 mb-2">{{ sensor.name }}</h3>
+        <div class="flex-1 flex items-center justify-center text-taupe-400">
+            Loading {{ sensor.name }}...
+        </div>
+    </div>
+    {% endfor %}
+</div>

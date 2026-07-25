@@ -1,0 +1,21 @@
+<!-- components/dashboard/load_sensors.html -->
+<div id="sensor-charts-panel" 
+     class="lg:col-span-5 flex flex-col gap-6"
+     hx-get="/sensors/nearest-datacenter"
+     hx-trigger="load"
+     hx-swap="outerHTML">
+    <div class="text-taupe-400 flex items-center justify-center h-[288px] bg-white rounded-xl shadow-sm border border-taupe-200">
+       Gathering nearby data centers...
+    </div>
+</div>
+
+<script>
+document.body.addEventListener('datacenter-selected', (e) => {
+    const panel = document.getElementById('sensor-charts-panel');
+    if (panel && e.detail && e.detail.datacenterId) {
+        panel.setAttribute('hx-get', `/sensors/by-datacenter/${e.detail.datacenterId}`);
+        // Trigger the update explicitly since hx-trigger="load" already fired
+        htmx.ajax('GET', panel.getAttribute('hx-get'), {target: '#sensor-charts-panel', swap: 'outerHTML'});
+    }
+});
+</script>

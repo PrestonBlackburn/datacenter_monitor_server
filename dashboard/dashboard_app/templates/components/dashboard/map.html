@@ -1,0 +1,84 @@
+<h2 class="text-base font-semibold text-taupe-800 mb-3">Facility Locations</h2>
+<div id="map" class="w-full flex-1 rounded-lg z-0"></div>
+
+<script>
+(function () {
+    const DEFAULT_LAT = 38.8339;
+    const DEFAULT_LONG = -104.8214;
+    const mapContainer = document.getElementById('map');
+
+    if (!mapContainer) return;
+
+    function initMap(lat, long) {
+        const map = L.map('map').setView([lat, long], 12);
+        
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map);
+
+        // Custom Icon for the Datacenter (e.g., Terracotta/Rust color matching your charts)
+        const datacenterIcon = L.divIcon({
+            className: 'datacenter-transparent-marker',
+            html: `
+<svg width="83" height="83" viewBox="0 0 83 83" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M70.4808 17.5683C69.8486 17.3031 69.1512 17.2339 68.4791 17.3695C67.807 17.5052 67.1912 17.8395 66.7113 18.3292L58.7917 26.2488V20.75C58.7917 19.3667 57.9617 18.0871 56.6475 17.5683C56.0152 17.3031 55.3179 17.2339 54.6458 17.3695C53.9737 17.5052 53.3578 17.8395 52.8779 18.3292L44.9583 26.2488V20.75C44.9583 19.3667 44.1283 18.0871 42.8142 17.5683C42.1819 17.3031 41.4846 17.2339 40.8125 17.3695C40.1404 17.5052 39.5245 17.8395 39.0446 18.3292L31.125 26.2488V13.8333C31.125 11.9312 29.5687 10.375 27.6667 10.375H13.8333C11.9312 10.375 10.375 11.9312 10.375 13.8333V65.7083C10.375 67.6104 11.9312 69.1667 13.8333 69.1667H69.1667C71.0687 69.1667 72.625 67.6104 72.625 65.7083V20.75C72.625 19.3667 71.795 18.0871 70.4808 17.5683ZM31.125 57.0625H24.2083V46.6875H31.125V57.0625ZM44.9583 57.0625H38.0417V46.6875H44.9583V57.0625ZM58.7917 57.0625H51.875V46.6875H58.7917V57.0625Z" fill="#797A52"/>
+</svg>
+            `,
+            iconSize: [32, 32],   
+            iconAnchor: [16, 32], 
+            popupAnchor: [0, -32]
+        });
+
+        // Custom Icon for Sensors (e.g., Blue color matching secondary series)
+        const sensorIcon = L.divIcon({
+            className: 'sensor-transparent-marker',
+            html: `
+<svg width="68" height="68" viewBox="0 0 68 68" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M13.954 54.0458C11.404 51.4485 9.38573 48.4386 7.89917 45.0159C6.41262 41.5933 5.66839 37.9213 5.6665 33.9999C5.6665 30.0333 6.41073 26.3386 7.89917 22.9159C9.38762 19.4933 11.4059 16.506 13.954 13.9541L17.9915 17.9916C15.9137 20.0694 14.2846 22.4777 13.104 25.2166C11.9234 27.9555 11.3332 30.8833 11.3332 33.9999C11.3332 37.1638 11.9234 40.1152 13.104 42.8541C14.2846 45.593 15.9137 47.9777 17.9915 50.0083L13.954 54.0458ZM21.9582 46.0416C20.4471 44.4833 19.2429 42.6775 18.3457 40.6243C17.4484 38.571 16.9998 36.3629 16.9998 33.9999C16.9998 31.5916 17.4484 29.3599 18.3457 27.3048C19.2429 25.2497 20.4471 23.4675 21.9582 21.9583L25.9957 25.9958C24.9568 27.0347 24.1427 28.2388 23.5533 29.6083C22.964 30.9777 22.6684 32.4416 22.6665 33.9999C22.6646 35.5583 22.9602 37.0222 23.5533 38.3916C24.1464 39.761 24.9606 40.9652 25.9957 42.0041L21.9582 46.0416ZM29.9992 38.0006C28.8885 36.8937 28.3332 35.5602 28.3332 33.9999C28.3332 32.4397 28.8885 31.1062 29.9992 29.9993C31.1098 28.8924 32.4434 28.337 33.9998 28.3333C35.5563 28.3295 36.8908 28.8848 38.0033 29.9993C39.1159 31.1137 39.6703 32.4473 39.6665 33.9999C39.6627 35.5526 39.1083 36.8871 38.0033 38.0034C36.8983 39.1198 35.5638 39.6742 33.9998 39.6666C32.4358 39.659 31.1023 39.1047 29.9992 38.0034M46.0415 46.0416L42.004 42.0041C43.0429 40.9652 43.8579 39.761 44.4492 38.3916C45.0404 37.0222 45.3351 35.5583 45.3332 33.9999C45.3313 32.4416 45.0366 30.9777 44.4492 29.6083C43.8617 28.2388 43.0467 27.0347 42.004 25.9958L46.0415 21.9583C47.5526 23.4694 48.7568 25.2515 49.654 27.3048C50.5512 29.358 50.9998 31.5897 50.9998 33.9999C50.9998 36.361 50.5512 38.5682 49.654 40.6214C48.7568 42.6747 47.5526 44.4814 46.0415 46.0416ZM54.0457 54.0458L50.0082 50.0083C52.0859 47.9305 53.7151 45.5222 54.8957 42.7833C56.0762 40.0444 56.6665 37.1166 56.6665 33.9999C56.6665 30.836 56.0762 27.8847 54.8957 25.1458C53.7151 22.4069 52.0859 20.0222 50.0082 17.9916L54.0457 13.9541C56.5957 16.5041 58.6149 19.4904 60.1033 22.9131C61.5918 26.3358 62.3351 30.0314 62.3332 33.9999C62.3332 37.9194 61.5889 41.5914 60.1005 45.0159C58.6121 48.4405 56.5938 51.4504 54.0457 54.0458Z" fill="#C98769"/>
+</svg>
+            `,
+            iconSize: [24, 24],    
+            iconAnchor: [12, 12],
+            popupAnchor: [0, -12]
+        });
+
+        // 1. Add Datacenter Marker
+        L.marker([{{ datacenter.lat }}, {{ datacenter.long }}], { icon: datacenterIcon })
+            .addTo(map)
+            .bindPopup('<b>{{ datacenter.name }}</b><br/>Status: {{ datacenter.status }}');
+
+        // 2. Loop through and add Sensor Markers
+        {% for sensor in sensors %}
+            {% if sensor.lat and sensor.long %}
+            L.marker([{{ sensor.lat }}, {{ sensor.long }}], { icon: sensorIcon })
+                .addTo(map)
+                .bindPopup('<b>Sensor: {{ sensor.name }}</b><br/>ID: {{ sensor.sensor_id }}');
+            {% endif %}
+        {% endfor %}
+
+        // Use ResizeObserver instead of setTimeout to handle Firefox/flexbox sizing bugs
+        const resizeObserver = new ResizeObserver(() => {
+            map.invalidateSize();
+        });
+        resizeObserver.observe(mapContainer);
+    }
+
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                window.__userLocated = true;
+                initMap(position.coords.latitude, position.coords.longitude);
+            },
+            (error) => {
+                window.__userLocated = false;
+                initMap(DEFAULT_LAT, DEFAULT_LONG);
+            },
+            { timeout: 5000, maximumAge: 60000 }
+        );
+    } else {
+        window.__userLocated = false;
+        initMap(DEFAULT_LAT, DEFAULT_LONG);
+    }
+})();
+</script>

@@ -1,0 +1,14 @@
+FROM python:3.13-bookworm
+
+RUN useradd --create-home appuser
+WORKDIR /home/appuser/app
+
+COPY --chown=appuser:appuser pyproject.toml ./
+COPY --chown=appuser:appuser . .
+
+RUN pip install --no-cache-dir .
+
+USER appuser
+
+EXPOSE 8000
+CMD ["litestar", "--app=dashboard_app:app", "run", "--host", "0.0.0.0", "--port", "8000"]

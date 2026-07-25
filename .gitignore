@@ -3,3 +3,9 @@ venv
 *.csv
 *.dump
 .env*
+**/node_modules/**
+__pycache__
+local_llm/**
+**/opencode.json
+**/local_volume/**
+**/seed_data/**
