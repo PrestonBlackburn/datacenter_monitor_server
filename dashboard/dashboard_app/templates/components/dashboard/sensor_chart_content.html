@@ -1,0 +1,227 @@
+<!-- <h3 class="text-sm font-semibold text-taupe-800 mb-2">{{ sensor.sensor_id }}</h3>
+<div class="flex items-center gap-2">
+    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-dusty-olive-100 text-dusty-olive-800">
+        System Active
+    </span>
+</div>
+<div id="chart-{{ sensor.sensor_id }}" class="w-full flex-1 min-h-[200px]"></div>
+
+<script>
+(function () {
+    const series = {{ series | tojson }};
+    const colors = ['#c25e38', '#4a90d9'];
+    const container = document.getElementById('chart-{{ sensor.sensor_id }}');
+
+    function formatTimestamp(isoStr) {
+        if (!isoStr) return '';
+        const d = new Date(isoStr);
+        const month = d.toLocaleString('en-US', { month: 'short' });
+        const day = String(d.getDate()).padStart(2, '0');
+        const hours = String(d.getHours()).padStart(2, '0');
+        const mins = String(d.getMinutes()).padStart(2, '0');
+        return `${month} ${day}, ${hours}:${mins}`;
+    }
+
+    if (container) {
+        const formattedSeries = series.map((s, i) => {
+                const dataPoints = s.timestamps.map((ts, index) => [
+                    new Date(ts).getTime(), // Convert ISO string to millisecond timestamp
+                    s.values[index]
+                ]);
+            return {
+                name: s.label,
+                data: dataPoints,
+                type: 'line',
+                smooth: true,
+                color: colors[i % colors.length]
+            };
+        });
+
+        const chart = echarts.init(container);
+        chart.setOption({
+            grid: { top: 35, right: 25, bottom: 45, left: 50, containLabel: true },
+            tooltip: { 
+                trigger: 'axis',
+                formatter: function (params) {
+                    // Clean tooltip formatting for time axes
+                    let result = `<b>${new Date(params[0].value[0]).toLocaleString()}</b><br/>`;
+                    params.forEach(item => {
+                        result += `${item.marker} ${item.seriesName}: <b>${item.value[1]} dBFS</b><br/>`;
+                    });
+                    return result;
+                }
+            },
+            legend: { data: series.map(s => s.label), top: 0 },
+            xAxis: { 
+                type: 'time', 
+                name: 'Time',
+                nameLocation: 'middle',
+                nameGap: 30,
+                nameTextStyle: {
+                    fontWeight: 'bold',
+                    color: '#6b6661'
+                },
+                axisLabel: {
+                    rotate: 25,
+                    textStyle: { color: '#8c857b' }
+                }
+            },
+            yAxis: { 
+                type: 'value',
+                name: 'Audio Level (dBFS)',
+                nameLocation: 'middle',
+                nameGap: 40,
+                nameTextStyle: {
+                    fontWeight: 'bold',
+                    color: '#6b6661',
+                }
+            
+            },
+            series: formattedSeries
+        });
+        // Automatically resize chart when container layout settles or changes
+        const resizeObserver = new ResizeObserver(() => {
+            chart.resize();
+        });
+        resizeObserver.observe(container);
+
+        // Fallback cleanup if the element is removed from DOM
+        window.addEventListener('resize', () => chart.resize());
+    }
+})();
+</script> -->
+
+
+
+<h3 class="text-sm font-semibold text-taupe-800 mb-2">{{ sensor.sensor_id }}</h3>
+<div class="flex items-center gap-2">
+    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-dusty-olive-100 text-dusty-olive-800">
+        System Active
+    </span>
+</div>
+<div id="chart-{{ sensor.sensor_id }}" class="w-full flex-1 min-h-[200px]"></div>
+
+<script>
+(function () {
+    const initialSeries = {{ series | tojson }};
+    const colors = ['#c25e38', '#4a90d9'];
+    const sensorId = {{ sensor.sensor_id | tojson }};
+    const container = document.getElementById('chart-' + sensorId);
+    const POLL_INTERVAL_MS = 8000; // 5-10s
+    const MAX_POINTS_PER_SERIES = 1000; // sliding window so the chart doesn't grow forever
+
+    function formatTimestamp(isoStr) {
+        if (!isoStr) return '';
+        const d = new Date(isoStr);
+        const month = d.toLocaleString('en-US', { month: 'short' });
+        const day = String(d.getDate()).padStart(2, '0');
+        const hours = String(d.getHours()).padStart(2, '0');
+        const mins = String(d.getMinutes()).padStart(2, '0');
+        return `${month} ${day}, ${hours}:${mins}`;
+    }
+
+    if (!container) return;
+
+    // Keep a live reference to each series def, keyed by label, so we can mutate .data in place
+    const seriesByLabel = {};
+    const formattedSeries = initialSeries.map((s, i) => {
+        const dataPoints = s.timestamps.map((ts, index) => [
+            new Date(ts).getTime(),
+            s.values[index]
+        ]);
+        const def = {
+            name: s.label,
+            data: dataPoints,
+            type: 'line',
+            smooth: true,
+            color: colors[i % colors.length]
+        };
+        seriesByLabel[s.label] = def;
+        return def;
+    });
+
+    const chart = echarts.init(container);
+    chart.setOption({
+        grid: { top: 35, right: 25, bottom: 45, left: 50, containLabel: true },
+        tooltip: {
+            trigger: 'axis',
+            formatter: function (params) {
+                let result = `<b>${new Date(params[0].value[0]).toLocaleString()}</b><br/>`;
+                params.forEach(item => {
+                    result += `${item.marker} ${item.seriesName}: <b>${item.value[1]} dBFS</b><br/>`;
+                });
+                return result;
+            }
+        },
+        legend: { data: initialSeries.map(s => s.label), top: 0 },
+        xAxis: {
+            type: 'time',
+            name: 'Time',
+            nameLocation: 'middle',
+            nameGap: 30,
+            nameTextStyle: { fontWeight: 'bold', color: '#6b6661' },
+            axisLabel: { rotate: 25, textStyle: { color: '#8c857b' } }
+        },
+        yAxis: {
+            type: 'value',
+            name: 'Audio Level (dBFS)',
+            nameLocation: 'middle',
+            nameGap: 40,
+            nameTextStyle: { fontWeight: 'bold', color: '#6b6661' }
+        },
+        series: formattedSeries
+    });
+
+    // Track the newest timestamp we've plotted per series, to dedupe against the overlapping poll window
+    const lastTimestamp = {};
+    formattedSeries.forEach(s => {
+        lastTimestamp[s.name] = s.data.length ? s.data[s.data.length - 1][0] : 0;
+    });
+
+    async function pollLatest() {
+        try {
+            const res = await fetch(`/sensor/${encodeURIComponent(sensorId)}/data/latest`);
+            if (!res.ok) return;
+            const latest = await res.json();
+
+            let changed = false;
+            latest.forEach(s => {
+                const def = seriesByLabel[s.label];
+                if (!def) return; // unknown frequency band, ignore
+
+                const lastTs = lastTimestamp[s.label] || 0;
+                const newPoints = s.timestamps
+                    .map((ts, i) => [new Date(ts).getTime(), s.values[i]])
+                    .filter(p => p[0] > lastTs);
+
+                if (newPoints.length === 0) return;
+
+                def.data = def.data.concat(newPoints);
+                if (def.data.length > MAX_POINTS_PER_SERIES) {
+                    def.data = def.data.slice(-MAX_POINTS_PER_SERIES);
+                }
+                lastTimestamp[s.label] = def.data[def.data.length - 1][0];
+                changed = true;
+            });
+
+            if (changed) {
+                chart.setOption({ series: Object.values(seriesByLabel) });
+            }
+        } catch (err) {
+            console.error(`Failed to poll latest data for sensor ${sensorId}`, err);
+        }
+    }
+
+    const intervalId = setInterval(pollLatest, POLL_INTERVAL_MS);
+
+    // Stop polling and free the chart if htmx ever removes this node (e.g. a later re-swap)
+    container.addEventListener('htmx:beforeCleanupElement', () => {
+        clearInterval(intervalId);
+        chart.dispose();
+    });
+
+    const resizeObserver = new ResizeObserver(() => chart.resize());
+    resizeObserver.observe(container);
+    window.addEventListener('resize', () => chart.resize());
+})();
+</script>

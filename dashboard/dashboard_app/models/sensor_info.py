@@ -43,7 +43,7 @@ class SensorInfo:
                 lat,
                 long,
                 geo_time_start,
-                geo_time_end,
+                geo_time_stop,
                 tags
             )
         VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"""
@@ -72,7 +72,7 @@ async def get_sensor_by_name(
         lat,
         long,
         geo_time_start,
-        geo_time_end,
+        geo_time_stop,
         tags
     FROM app.audio_sensor_info
     WHERE sensor_id ilike %s
@@ -91,7 +91,7 @@ async def get_sensor_by_name(
                     lat = row['lat'],
                     long = row['long'],
                     geo_time_start=row["geo_time_start"],
-                    geo_time_end=row["geo_time_end"],
+                    geo_time_stop=row["geo_time_stop"],
                     tags=row["tags"]
                 )
                 sensors.append(sensor_info)
@@ -121,7 +121,7 @@ async def get_sensors_in_range(
         lat,
         long,
         geo_time_start,
-        geo_time_end,
+        geo_time_stop,
         tags
     FROM app.audio_sensor_info
     WHERE
@@ -157,7 +157,7 @@ async def get_sensors_in_range(
                     lat = row['lat'],
                     long = row['long'],
                     geo_time_start=row["geo_time_start"],
-                    geo_time_end=row["geo_time_end"],
+                    geo_time_stop=row["geo_time_stop"],
                     tags=row["tags"]
                 )
             sensors.append(sensor_info)
@@ -183,7 +183,7 @@ async def get_sensors_by_datacenter(
         lat,
         long,
         geo_time_start,
-        geo_time_end,
+        geo_time_stop,
         tags
     FROM app.audio_sensor_info
     WHERE
@@ -219,10 +219,10 @@ async def get_sensors_by_datacenter(
                     lat = row['lat'],
                     long = row['long'],
                     geo_time_start=row["geo_time_start"],
-                    geo_time_end=row["geo_time_end"],
+                    geo_time_stop=row["geo_time_stop"],
                     tags=row["tags"]
                 )
-            sensors.append(sensor_info)
+                sensors.append(sensor_info)
     except Exception as e:
         _logger.error(f"Error getting sensor info for datacenter: {datacenter.name} \n Error: {e}")
     

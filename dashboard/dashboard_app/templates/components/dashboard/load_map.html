@@ -1,0 +1,10 @@
+<!-- Left Column: Leaflet Map (Spans 7 cols on large screens) -->
+<div class="lg:col-span-7 bg-white rounded-xl shadow-sm border border-taupe-200 p-4 flex flex-col h-[600px]"
+     hx-get="/datacenter/nearest/map"
+     hx-trigger="load"
+     hx-swap="innerHTML">
+    <h2 class="text-base font-semibold text-taupe-800 mb-3">Facility Locations</h2>
+    <div class="w-full flex-1 flex items-center justify-center text-taupe-400 htmx-indicator">
+        Loading map...
+    </div>
+</div>

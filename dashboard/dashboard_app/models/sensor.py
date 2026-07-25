@@ -74,18 +74,16 @@ async def get_sensor_data_by_range(
     try:
         async with conn.cursor() as cur:
             await cur.execute(sql, (hz, sensor.sensor_id, start, stop))
-            row = await cur.fetchone()
+            rows = await cur.fetchall()
 
-            if row is None:
-                return None
-
-            datapoint = AudioMeasurement(
-                received_time = row['received_time'], 
-                sensor_id = row['sensor_id'],
-                hz = row['hz'], 
-                dbfs = row['dbfs']
-            )
-        datapoints.append(datapoint)
+            for row in rows:
+                datapoint = AudioMeasurement(
+                    received_time = row['received_time'], 
+                    sensor_id = row['sensor_id'],
+                    hz = row['hz'], 
+                    dbfs = row['dbfs']
+                )
+                datapoints.append(datapoint)
     except Exception as e:
         _logger.error(f"Error getting closest audio measurements: {e}")
         return None

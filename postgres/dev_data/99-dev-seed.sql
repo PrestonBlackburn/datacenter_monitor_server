@@ -11,14 +11,11 @@
 INSERT INTO app.audio_sensor_info (
     sensor_id, lat, long, geo_time_start, geo_time_stop, tags
 )
-SELECT
-    'sensor-' || lpad(i::text, 2, '0'),
-    38.80 + (i * 0.01),
-    -104.80 - (i * 0.01),
-    now() - (i || ' days')::interval,
-    NULL,
-    jsonb_build_object('zone', 'zone-' || (i % 3), 'active', true)
-FROM generate_series(1, 10) AS i;
+VALUES 
+	('sensor-01', 38.89201, -104.859,  now() - (1 || ' days')::interval, NULL, jsonb_build_object('zone', 'zone-1', 'active', true)),
+	('sensor-02', 38.89261, -104.85881,  now() - (2 || ' days')::interval, NULL, jsonb_build_object('zone', 'zone-2', 'active', true))
+;
+
 
 -- ---------------------------------------------
 -- app.audio_sensor (10 rows, hypertable — spread over the last 10 hours)
@@ -36,6 +33,17 @@ SELECT
     round((-60 + random() * 40)::numeric, 2)
 FROM generate_series(1, 10) AS i;
 
+
+-------- Manual testing (for live data) --------
+INSERT INTO app.audio_sensor (
+    received_time, sensor_id, hz, dbfs
+)
+VALUES (
+    now(),
+    'sensor-01',
+    100,
+    round((-60 + random() * 40)::numeric, 2)
+);
 -- ---------------------------------------------
 -- app.audio_sensor_errors (10 rows)
 -- ---------------------------------------------
@@ -50,17 +58,3 @@ SELECT
     jsonb_build_object('error', 'parse_failure', 'code', 400 + i)
 FROM generate_series(0, 9) AS i;
 
--- ---------------------------------------------
--- app.datacenter_info (10 rows)
--- ---------------------------------------------
-INSERT INTO app.datacenter_info (
-    datacenter_id, lat, long, name, status, description
-)
-SELECT
-    gen_random_uuid(),
-    38.80 + (i * 0.02),
-    -104.90 + (i * 0.02),
-    'dc-' || lpad(i::text, 2, '0'),
-    (ARRAY['Planned', 'Under Construction', 'Operational'])[1 + (i % 3)],
-    'Dev seed datacenter #' || i
-FROM generate_series(1, 10) AS i;

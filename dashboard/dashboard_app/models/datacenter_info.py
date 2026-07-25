@@ -159,8 +159,8 @@ async def get_datacenters_in_range(
     return datacenters_in_range
     
 
-def get_datacenters(
-        conn: psycopg.Connection
+async def get_datacenters(
+        conn: psycopg.AsyncConnection
 ) -> list[DatacenterInfo]:
     sql = """SELECT
         datacenter_id,
@@ -175,10 +175,10 @@ def get_datacenters(
     """
     datacenters = []
     try:
-        with conn.cursor() as cur:
-            cur.execute(sql)
-            conn.commit()
-            rows = cur.fetchall()
+        async with conn.cursor() as cur:
+            await cur.execute(sql)
+            await conn.commit()
+            rows = await cur.fetchall()
 
             for row in rows:
                 datacenter_info = DatacenterInfo(
@@ -198,9 +198,9 @@ def get_datacenters(
     return datacenters
     
     
-def get_datacenter_by_name(
+async def get_datacenter_by_name(
         datacenter_name:str, 
-        conn: psycopg.Connection
+        conn: psycopg.AsyncConnection
     ) -> DatacenterInfo: 
     # in the case there are two we'll raise a warning and choose one
     sql = """SELECT
@@ -217,10 +217,10 @@ def get_datacenter_by_name(
     """
     datacenters = []
     try:
-        with conn.cursor() as cur:
-            cur.execute(sql, (datacenter_name,))
-            conn.commit()
-            rows = cur.fetchall()
+        async with conn.cursor() as cur:
+            await cur.execute(sql, (datacenter_name,))
+            await conn.commit()
+            rows = await cur.fetchall()
 
             for row in rows:
                 datacenter_info = DatacenterInfo(
@@ -240,6 +240,48 @@ def get_datacenter_by_name(
     if len(datacenters) > 1:
         _logger.warning(f"multiple datacenters found: {[datacenter.name for datacenter in datacenters]}. \nUsing: {datacenters[0].name}")
     
+    if len(datacenters) == 0:
+        return []
+    
     datacenter = datacenters[0]
     
     return datacenter
+
+async def get_datacenter_by_id(
+        datacenter_name:str, 
+        conn: psycopg.AsyncConnection
+    ) -> DatacenterInfo: 
+    # in the case there are two we'll raise a warning and choose one
+    sql = """SELECT
+        datacenter_id,
+        created_time, 
+        updated_time, 
+        lat, 
+        long,
+        name,
+        status, 
+        description
+    FROM app.datacenter_info
+    WHERE datacenter_id = %s
+    """
+    try:
+        async with conn.cursor() as cur:
+            await cur.execute(sql, (datacenter_name,))
+            await conn.commit()
+            row = await cur.fetchone()
+            datacenter_info = DatacenterInfo(
+                datacenter_id = row['datacenter_id'],
+                created_time = row['created_time'],
+                updated_time = row['updated_time'],
+                lat = row['lat'],
+                long = row['long'],
+                name=row["name"],
+                status=row["status"],
+                description=row["description"]
+            )
+
+    except Exception as e:
+        _logger.error(f"Error getting closest datacetner: {e}")
+        return None
+    
+    return datacenter_info

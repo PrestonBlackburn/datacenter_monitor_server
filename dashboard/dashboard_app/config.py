@@ -8,7 +8,7 @@ import os
 _logger = logging.getLogger(__name__)
 
 def get_default_frequency_ranges() -> list:
-    default_frequencies = [110, 440, 1000, 4000]
+    default_frequencies = [100, 1000]
     return default_frequencies
 
 @lru_cache(maxsize=1)
@@ -41,7 +41,8 @@ pool = AsyncConnectionPool(
     conninfo = conn_str(),
     min_size=2,
     max_size=10,
-    open=False
+    open=False,
+    kwargs={"row_factory": psycopg.rows.dict_row}
 )
 
 async def open_pg_pool():
