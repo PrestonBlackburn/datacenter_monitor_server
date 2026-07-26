@@ -107,11 +107,11 @@ class AudioSensorError:
     received_time: datetime
     sensor_id: str
     data_b64: str | None
-    object: Jsonb
+    tags: Jsonb
 
     def insert(self, conn: psycopg.Connection) -> None:
         sql = """INSERT INTO app.audio_sensor_errors
-                (created_time, recieved_time, sensor_id, data_b64, object)
+                (created_time, recieved_time, sensor_id, data_b64, tags)
             VALUES (%s, %s, %s, %s, %s)"""
         with conn.cursor() as cur:
             cur.execute(sql, (
@@ -119,7 +119,7 @@ class AudioSensorError:
                 self.received_time,
                 self.sensor_id,
                 self.data_b64,
-                self.object
+                self.tags
             ))
             conn.commit()
 
@@ -200,19 +200,19 @@ def create_record(payload:dict, received_time: datetime) -> list[AudioSensorMess
             dbfs = decoded["hz_4000_dbfs"],
         ),
         AudioSensorMessage(
-            eceived_time = received_time,
+            received_time = received_time,
             sensor_id = dev_eui,
             hz = 1000,
             dbfs = decoded["hz_1000_dbfs"],
         ),
         AudioSensorMessage(
-            eceived_time = received_time,
+            received_time = received_time,
             sensor_id = dev_eui,
             hz = 440,
             dbfs = decoded["hz_440_dbfs"],
         ),
         AudioSensorMessage(
-            eceived_time = received_time,
+            received_time = received_time,
             sensor_id = dev_eui,
             hz = 110,
             dbfs = decoded["hz_110_dbfs"],
@@ -233,7 +233,7 @@ def write_error(conn: psycopg.Connection | None,
                 received_time = received_time,
                 sensor_id = sensor_id,
                 data_b64 = data_b64,
-                object = Jsonb(payload_for_json)
+                tags = Jsonb(payload_for_json)
             )
         error_record.insert(conn)
     except Exception as e:
