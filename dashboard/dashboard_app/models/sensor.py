@@ -51,11 +51,15 @@ async def get_sensor_data_by_range(
     start: datetime,
     stop: datetime,
     hz: int,
-    conn: psycopg.AsyncConnection
+    conn: psycopg.AsyncConnection,
+    max_points: int | None = 1000
 ) -> list[AudioMeasurement]:
 
     if isinstance(sensor, str):
         sensor = get_sensor_by_name(sensor)
+
+    if max_points is None:
+        max_points = 1000
 
     sql = """SELECT
         received_time, 
@@ -67,13 +71,14 @@ async def get_sensor_data_by_range(
     AND sensor_id = %s
     AND received_time > %s 
     AND received_time < %s  
-    ORDER BY received_time
+    ORDER BY received_time DESC
+	limit %s
     """
 
     datapoints = []
     try:
         async with conn.cursor() as cur:
-            await cur.execute(sql, (hz, sensor.sensor_id, start, stop))
+            await cur.execute(sql, (hz, sensor.sensor_id, start, stop, max_points))
             rows = await cur.fetchall()
 
             for row in rows:

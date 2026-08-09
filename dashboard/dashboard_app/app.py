@@ -106,14 +106,15 @@ async def get_datacenter_sensors_data(
     # 1. Sensor assocaited with the datacenter
     # 2. Available frequencies
     # 3. actual datapoints per frequency over time
+    MAX_POINTS = 1000
     async with pool.connection() as conn:
         datacenter: DatacenterInfo = await get_datacenter_by_name(datacenter_id, conn)
         sensors: list[SensorInfo] = await get_sensors_by_datacenter(datacenter, conn)
 
         # start with all time data
         sensor_datasets: list[SensorData] = []
-        start = datetime.datetime(1990, 1, 1, 0, 0, 0, 0, None)
-        stop = datetime.datetime.now()
+        start = datetime.datetime(1990, 1, 1, tzinfo=datetime.timezone.utc)
+        stop = datetime.datetime.now(datetime.timezone.utc)
         selected_frequencies = get_default_frequency_ranges()
         for sensor in sensors:
             for hz in selected_frequencies:
@@ -122,7 +123,8 @@ async def get_datacenter_sensors_data(
                     start,
                     stop,
                     hz,
-                    conn
+                    conn,
+                    MAX_POINTS
                 )
                 sensor_datasets.append(
                     SensorData(
@@ -173,14 +175,16 @@ async def get_latest_datacenter_sensors_data(
     # 1. Sensor assocaited with the datacenter
     # 2. Available frequencies
     # 3. actual datapoints per frequency over time
+    MAX_POINTS = 100
     async with pool.connection() as conn:
         datacenter: DatacenterInfo = await get_datacenter_by_id(datacenter_id, conn)
         sensors: list[SensorInfo] = await get_sensors_by_datacenter(datacenter, conn)
 
         # start with all time data
         sensor_datasets: list[SensorData] = []
-        start = datetime.datetime.now() - datetime.timedelta(seconds=60)
-        stop = datetime.datetime.now()
+        now = datetime.datetime.now(datetime.timezone.utc) 
+        start = now - datetime.timedelta(seconds=60)
+        stop = now
         selected_frequencies = get_default_frequency_ranges()
 
         # possibly might want this async for
@@ -191,7 +195,8 @@ async def get_latest_datacenter_sensors_data(
                     start,
                     stop,
                     hz,
-                    conn
+                    conn,
+                    MAX_POINTS
                 )
                 sensor_datasets.append(
                     SensorData(
@@ -209,14 +214,15 @@ async def get_sensor_data(
 ) -> Template:
     # 1. Available frequencies
     # 2. actual datapoints per frequency over time
+    MAX_POINTS = 1000
     async with pool.connection() as conn:
         sensor: SensorInfo = await get_sensor_by_name(sensor_id, conn)
         _logger.debug(f"Getting Info For Sensor: {sensor_id}")
 
         # start with all time data
         sensor_datasets: list[dict] = []
-        start = datetime.datetime(1990, 1, 1, 0, 0, 0, 0, None)
-        stop = datetime.datetime.now()
+        start = datetime.datetime(1990, 1, 1, tzinfo=datetime.timezone.utc)
+        stop = datetime.datetime.now(datetime.timezone.utc)
         selected_frequencies = get_default_frequency_ranges()
         for hz in selected_frequencies:
             _logger.debug(f"Getting sensor data for: {sensor_id} at {hz} hz")
@@ -225,7 +231,8 @@ async def get_sensor_data(
                 start,
                 stop,
                 hz,
-                conn
+                conn,
+                MAX_POINTS
             )
             _logger.debug(f"Got measurements:\n{measurements}")
             if measurements == [] or measurements == None:
@@ -250,14 +257,16 @@ async def get_latest_sensor_data(
 ) -> list[dict]:
     # 1. Available frequencies
     # 2. actual datapoints per frequency over time
+    MAX_POINTS = 100
     async with pool.connection() as conn:
         sensor: SensorInfo = await get_sensor_by_name(sensor_id, conn)
         _logger.debug(f"Getting latest info for sensor: {sensor_id}")
 
         # start with all time data
         sensor_datasets: list[dict] = []
-        start = datetime.datetime.now() - datetime.timedelta(seconds=60)
-        stop = datetime.datetime.now(datetime.timezone.utc)
+        now = datetime.datetime.now(datetime.timezone.utc)
+        start = now - datetime.timedelta(seconds=60)
+        stop = now
         selected_frequencies = get_default_frequency_ranges()
         for hz in selected_frequencies:
             _logger.debug(f"Getting latest sensor data for: {sensor_id} at {hz} hz")
@@ -266,7 +275,8 @@ async def get_latest_sensor_data(
                 start,
                 stop,
                 hz,
-                conn
+                conn,
+                MAX_POINTS
             )
             _logger.debug(f"Got measurements:\n{measurements}")
             if measurements == [] or measurements == None:

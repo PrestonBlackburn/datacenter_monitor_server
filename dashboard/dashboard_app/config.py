@@ -8,7 +8,7 @@ import os
 _logger = logging.getLogger(__name__)
 
 def get_default_frequency_ranges() -> list:
-    default_frequencies = [100, 1000]
+    default_frequencies = [110, 1000]
     return default_frequencies
 
 @lru_cache(maxsize=1)

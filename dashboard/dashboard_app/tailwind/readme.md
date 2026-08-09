@@ -1,11 +1,11 @@
 # Build Tailwind CSS
 
-from `app/tailwind`
+from `dashboard_app/tailwind`
 ```bash
 npm install tailwindcss @tailwindcss/cli
 ```
 
-Build the css from from `app/`
+Build the css from from `dashboard_app/`
 ```bash
 npx @tailwindcss/cli -i ./tailwind/input.css -o ./static/css/build.css --watch --minify
 # or
