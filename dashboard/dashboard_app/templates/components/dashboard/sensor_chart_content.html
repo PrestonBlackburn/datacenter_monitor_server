@@ -1,102 +1,8 @@
-<!-- <h3 class="text-sm font-semibold text-taupe-800 mb-2">{{ sensor.sensor_id }}</h3>
-<div class="flex items-center gap-2">
-    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-dusty-olive-100 text-dusty-olive-800">
-        System Active
-    </span>
-</div>
-<div id="chart-{{ sensor.sensor_id }}" class="w-full flex-1 min-h-[200px]"></div>
-
-<script>
-(function () {
-    const series = {{ series | tojson }};
-    const colors = ['#c25e38', '#4a90d9'];
-    const container = document.getElementById('chart-{{ sensor.sensor_id }}');
-
-    function formatTimestamp(isoStr) {
-        if (!isoStr) return '';
-        const d = new Date(isoStr);
-        const month = d.toLocaleString('en-US', { month: 'short' });
-        const day = String(d.getDate()).padStart(2, '0');
-        const hours = String(d.getHours()).padStart(2, '0');
-        const mins = String(d.getMinutes()).padStart(2, '0');
-        return `${month} ${day}, ${hours}:${mins}`;
-    }
-
-    if (container) {
-        const formattedSeries = series.map((s, i) => {
-                const dataPoints = s.timestamps.map((ts, index) => [
-                    new Date(ts).getTime(), // Convert ISO string to millisecond timestamp
-                    s.values[index]
-                ]);
-            return {
-                name: s.label,
-                data: dataPoints,
-                type: 'line',
-                smooth: true,
-                color: colors[i % colors.length]
-            };
-        });
-
-        const chart = echarts.init(container);
-        chart.setOption({
-            grid: { top: 35, right: 25, bottom: 45, left: 50, containLabel: true },
-            tooltip: { 
-                trigger: 'axis',
-                formatter: function (params) {
-                    // Clean tooltip formatting for time axes
-                    let result = `<b>${new Date(params[0].value[0]).toLocaleString()}</b><br/>`;
-                    params.forEach(item => {
-                        result += `${item.marker} ${item.seriesName}: <b>${item.value[1]} dBFS</b><br/>`;
-                    });
-                    return result;
-                }
-            },
-            legend: { data: series.map(s => s.label), top: 0 },
-            xAxis: { 
-                type: 'time', 
-                name: 'Time',
-                nameLocation: 'middle',
-                nameGap: 30,
-                nameTextStyle: {
-                    fontWeight: 'bold',
-                    color: '#6b6661'
-                },
-                axisLabel: {
-                    rotate: 25,
-                    textStyle: { color: '#8c857b' }
-                }
-            },
-            yAxis: { 
-                type: 'value',
-                name: 'Audio Level (dBFS)',
-                nameLocation: 'middle',
-                nameGap: 40,
-                nameTextStyle: {
-                    fontWeight: 'bold',
-                    color: '#6b6661',
-                }
-            
-            },
-            series: formattedSeries
-        });
-        // Automatically resize chart when container layout settles or changes
-        const resizeObserver = new ResizeObserver(() => {
-            chart.resize();
-        });
-        resizeObserver.observe(container);
-
-        // Fallback cleanup if the element is removed from DOM
-        window.addEventListener('resize', () => chart.resize());
-    }
-})();
-</script> -->
-
-
-
 <h3 class="text-sm font-semibold text-taupe-800 mb-2">{{ sensor.sensor_id }}</h3>
 <div class="flex items-center gap-2">
-    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-dusty-olive-100 text-dusty-olive-800">
-        System Active
+    <span id="last-heard-{{ sensor.sensor_id }}" class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-dusty-olive-100 text-dusty-olive-800">
+        <span class="last-heard-dot w-1.5 h-1.5 rounded-full bg-dusty-olive-500"></span>
+        <span class="last-heard-text">Last heard just now</span>
     </span>
 </div>
 <div id="chart-{{ sensor.sensor_id }}" class="w-full flex-1 min-h-[200px]"></div>
@@ -107,8 +13,14 @@
     const colors = ['#c25e38', '#4a90d9'];
     const sensorId = {{ sensor.sensor_id | tojson }};
     const container = document.getElementById('chart-' + sensorId);
+    const badge = document.getElementById('last-heard-' + sensorId);
+    const badgeDot = badge ? badge.querySelector('.last-heard-dot') : null;
+    const badgeText = badge ? badge.querySelector('.last-heard-text') : null;
+
     const POLL_INTERVAL_MS = 8000; // 5-10s
-    const MAX_POINTS_PER_SERIES = 1000; // sliding window so the chart doesn't grow forever
+    const LAST_HEARD_TICK_MS = 1000; // sliding window so the chart doesn't grow forever
+    const STALE_THRESHOLD_MS = 60 * 1000; // 1 minute
+    const MAX_POINTS_PER_SERIES = 1000;
 
     function formatTimestamp(isoStr) {
         if (!isoStr) return '';
@@ -120,21 +32,34 @@
         return `${month} ${day}, ${hours}:${mins}`;
     }
 
+    function formatRelative(diffMs) {
+        if (diffMs < 0) diffMs = 0;
+        const s = Math.floor(diffMs / 1000);
+        if (s < 5) return 'just now';
+        if (s < 60) return `${s}s ago`;
+        const m = Math.floor(s / 60);
+        if (m < 60) return `${m} min ago`;
+        const h = Math.floor(m / 60);
+        if (h < 24) return `${h}h ago`;
+        return formatTimestamp(new Date(Date.now() - diffMs).toISOString());
+    }
+
     if (!container) return;
 
     // Keep a live reference to each series def, keyed by label, so we can mutate .data in place
     const seriesByLabel = {};
     const formattedSeries = initialSeries.map((s, i) => {
-        const dataPoints = s.timestamps.map((ts, index) => [
-            new Date(ts).getTime(),
-            s.values[index]
-        ]);
+        const dataPoints = s.timestamps
+            .map((ts, index) => [new Date(ts).getTime(), s.values[index]])
+            .reverse(); // backend returns DESC; chart needs ASC
         const def = {
             name: s.label,
             data: dataPoints,
             type: 'line',
             smooth: true,
-            color: colors[i % colors.length]
+            color: colors[i % colors.length],
+            symbol: 'circle',
+            symbolSize: 2
         };
         seriesByLabel[s.label] = def;
         return def;
@@ -178,6 +103,31 @@
         lastTimestamp[s.name] = s.data.length ? s.data[s.data.length - 1][0] : 0;
     });
 
+    // Track the single most-recent timestamp across all series, for the "last heard" badge
+    let lastHeardTs = Math.max(0, ...Object.values(lastTimestamp));
+
+    function updateLastHeardBadge() {
+        if (!badge) return;
+        const diffMs = lastHeardTs ? (Date.now() - lastHeardTs) : Infinity;
+        const isRecent = diffMs <= STALE_THRESHOLD_MS;
+
+        badge.classList.toggle('bg-dusty-olive-100', isRecent);
+        badge.classList.toggle('text-dusty-olive-800', isRecent);
+        badge.classList.toggle('bg-red-100', !isRecent);
+        badge.classList.toggle('text-red-800', !isRecent);
+
+        if (badgeDot) {
+            badgeDot.classList.toggle('bg-dusty-olive-500', isRecent);
+            badgeDot.classList.toggle('bg-red-500', !isRecent);
+        }
+
+        if (badgeText) {
+            badgeText.textContent = lastHeardTs
+                ? `Last heard ${formatRelative(diffMs)}`
+                : 'No data yet';
+        }
+    }
+
     async function pollLatest() {
         try {
             const res = await fetch(`/sensor/${encodeURIComponent(sensorId)}/data/latest`);
@@ -196,6 +146,10 @@
 
                 if (newPoints.length === 0) return;
 
+                // Backend returns DESC (newest first) so we can LIMIT to latest N —
+                // reverse to ASC before appending so the chart's data array stays chronological
+                newPoints.reverse();
+
                 def.data = def.data.concat(newPoints);
                 if (def.data.length > MAX_POINTS_PER_SERIES) {
                     def.data = def.data.slice(-MAX_POINTS_PER_SERIES);
@@ -206,17 +160,24 @@
 
             if (changed) {
                 chart.setOption({ series: Object.values(seriesByLabel) });
+                lastHeardTs = Math.max(0, ...Object.values(lastTimestamp));
+                updateLastHeardBadge();
             }
         } catch (err) {
             console.error(`Failed to poll latest data for sensor ${sensorId}`, err);
         }
     }
 
+    // Paint the badge immediately with whatever we loaded server-side
+    updateLastHeardBadge();
+
     const intervalId = setInterval(pollLatest, POLL_INTERVAL_MS);
+    const tickId = setInterval(updateLastHeardBadge, LAST_HEARD_TICK_MS);
 
     // Stop polling and free the chart if htmx ever removes this node (e.g. a later re-swap)
     container.addEventListener('htmx:beforeCleanupElement', () => {
         clearInterval(intervalId);
+        clearInterval(tickId);
         chart.dispose();
     });
 
