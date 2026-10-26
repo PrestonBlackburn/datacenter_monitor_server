@@ -295,7 +295,7 @@ def on_message(client, userdata, msg):
         _logger.error("[DB ERROR] insert failed for %s: %s", sensor_id, e)
         invalidate_conn(conn)
 
-
+q
 def main():
     env = get_env()    
 
