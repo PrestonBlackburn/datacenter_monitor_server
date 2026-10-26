@@ -9,3 +9,4 @@ local_llm/**
 **/opencode.json
 **/local_volume/**
 **/seed_data/**
+*.gz

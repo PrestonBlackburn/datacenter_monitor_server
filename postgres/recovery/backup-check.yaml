@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: backup-check
+  namespace: sensors
+spec:
+  containers:
+  - name: pg
+    image: postgres:18
+    command: ["sleep", "86400"]
+    envFrom:
+    - secretRef:
+        name: sensor-secrets
+    env:
+    - name: PGPASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: sensor-secrets
+          key: POSTGRES_PASSWORD
+    volumeMounts:
+    - name: backup
+      mountPath: /backup
+  volumes:
+  - name: backup
+    persistentVolumeClaim:
+      claimName: sensor-dashboard-and-collection-backup-pvc
