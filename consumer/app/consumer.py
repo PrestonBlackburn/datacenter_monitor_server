@@ -9,6 +9,8 @@ from datetime import datetime, timezone
 import re
 import os
 from functools import lru_cache
+import threading
+import urllib.request
 
 import paho.mqtt.client as mqtt
 from psycopg.types.json import Jsonb
@@ -21,6 +23,9 @@ logging.basicConfig(
 )
 _logger = logging.getLogger("audio-sensor-consumer")
 _conn: psycopg.Connection | None = None
+
+_shutdown = threading.Event()
+HEALTHCHECK_INTERVAL = int(os.getenv("HEALTHCHECK_INTERVAL_SEC", 1800))
 
 @lru_cache(maxsize=1)
 def get_env() -> dict:
@@ -43,8 +48,41 @@ def get_env() -> dict:
         "db_port": int(os.getenv("POSTGRES_PORT", 5432)),
         "svc_pass": os.getenv("SENSOR_SVC_PASSWORD", "default"),
         "svc_user": os.getenv("SENSOR_SVC_USER", "sensor_svc"),
+        'healthcheck_endpoint': os.getenv("CONSUMER_HEALTHCHECK", None),
+        "healthcheck_interval": os.getenv('HEALTHCHECK_INTERVAL', None)
     }
     return env
+
+def db_ok(env: dict) -> bool:
+    # Fresh, short-lived connection: don't share _conn with the MQTT thread
+    try:
+        with psycopg.connect(
+            host=env["db_host"],
+            port=env["db_port"],
+            dbname=env["db"],
+            user=env["svc_user"],
+            password=env["svc_pass"],
+            connect_timeout=5,
+        ) as c:
+            c.execute("SELECT 1")
+        return True
+    except Exception as e:
+        _logger.warning("Healthcheck DB probe failed: %s", e)
+        return False
+
+def healthcheck_loop(client: mqtt.Client, env: dict) -> None:
+    url = env["healthcheck_endpoint"]
+    while True:
+        if client.is_connected() and db_ok(env):
+            try:
+                urllib.request.urlopen(url, timeout=10).read()
+            except Exception as e:
+                _logger.warning("Healthcheck ping failed: %s", e)
+        else:
+            _logger.warning("Healthcheck skipped: broker or DB not healthy")
+        if _shutdown.wait(HEALTHCHECK_INTERVAL):
+            break
+
 
 def get_conn() -> psycopg.Connection:
     global _conn
@@ -295,6 +333,7 @@ def on_message(client, userdata, msg):
         _logger.error("[DB ERROR] insert failed for %s: %s", sensor_id, e)
         invalidate_conn(conn)
 
+
 def main():
     env = get_env()    
 
@@ -311,6 +350,9 @@ def main():
     client.on_message = on_message
  
     client.connect(env['mqtt_host'], env['mqtt_port'], keepalive=30)
+
+    if env["healthcheck_endpoint"]:
+        threading.Thread(target=healthcheck_loop, args=(client, env), daemon=True).start()
  
     def shutdown(sig, frame):
         print("\nShutting down...")
