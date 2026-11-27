@@ -72,14 +72,20 @@ def db_ok(env: dict) -> bool:
 
 def healthcheck_loop(client: mqtt.Client, env: dict) -> None:
     url = env["healthcheck_endpoint"]
+    # Give the MQTT loop time to complete the CONNACK handshake
+    if _shutdown.wait(10):
+        return
     while True:
-        if client.is_connected() and db_ok(env):
+        mqtt_ok = client.is_connected()
+        database_ok = db_ok(env)
+        if mqtt_ok and database_ok:
             try:
                 urllib.request.urlopen(url, timeout=10).read()
+                _logger.info("Healthcheck ping sent")
             except Exception as e:
                 _logger.warning("Healthcheck ping failed: %s", e)
         else:
-            _logger.warning("Healthcheck skipped: broker or DB not healthy")
+            _logger.warning("Healthcheck skipped: mqtt_ok=%s db_ok=%s", mqtt_ok, database_ok)
         if _shutdown.wait(HEALTHCHECK_INTERVAL):
             break
 
